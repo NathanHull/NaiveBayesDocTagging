@@ -1,17 +1,27 @@
 import sys
+import math
 from nltk.stem import SnowballStemmer as Stemmer
 
 
 # Use Naive Bayes classifier
-# def calcClass(documents, totals, texts, words, sample):
-def calcClass(words):
-	currMax = 0
+def calcClass(words):	
+	# Preformat words
+	for word in words:
+		if len(word) > 2:
+			word = stemmer.stem(word)
+		else:
+			words.remove(word)
+			
+	currMax = -sys.maxsize
 	currSub = ''
-	
+
 	for subject in documents:
-		temp = documents[subject]
+		temp = math.log10(documents[subject] / numDocuments)
 		for word in words:
-			temp *= (texts[subject][word] + 1) / (totals[subject] + sample)
+			try:
+				temp += math.log10((texts[subject][word] + 1) / (totals[subject] + vocabularySize))
+			except KeyError:
+				temp += math.log10(1 / (totals[subject] + vocabularySize))
 
 		if temp > currMax:
 			currMax = temp
@@ -44,7 +54,9 @@ stemmer = Stemmer('english')
 
 print('Opening training data file')
 with open(sys.argv[1]) as f:
+	print('Reading training data file')
 	trainlines = f.readlines()
+numDocuments = len(trainlines)
 
 print('%i lines of training data found' % len(trainlines))
 for line in trainlines:
@@ -54,7 +66,7 @@ for line in trainlines:
 	if subject not in documents:
 		documents[subject] = 1
 	else:
-		documents[subject] = documents[subject] + 1
+		documents[subject] += 1
 
 	if subject not in totals:
 		totals[subject] = 0
@@ -70,14 +82,14 @@ for line in trainlines:
 			if word not in texts[subject]:
 				texts[subject][word] = 1
 			else:
-				texts[subject][word] = texts[subject][word] + 1
+				texts[subject][word] += 1
 
-print('%i distinct words found in the training data' % (len(vocabulary)))
-
-print()
+vocabularySize = len(vocabulary)
+print('%i distinct words found in the training data' % vocabularySize)
 
 print('Opening test data file')
 with open(sys.argv[2]) as f:
+	print('Reading test data file')
 	testlines = f.readlines()
 
 print('%i lines of test data found' % len(testlines))
@@ -88,4 +100,4 @@ for line in testlines:
 	if calcClass(words) == words[0]:
 		correctClassifications += 1
 
-print('%i correct classifications out of %i entries, or %f%% correct' % (correctClassifications, len(testlines), float(correctClassifications/len(testlines))))
+print('%i correct classifications out of %i entries, or %.2f%% correct' % (correctClassifications, len(testlines), float(100 * correctClassifications/len(testlines))))
